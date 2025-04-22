@@ -21,6 +21,12 @@ pipeline {
         
         // STAGE 2: Terraform (init & apply)
         stage('Terraform Apply') {
+            agent {
+                    docker {
+                    image 'hashicorp/terraform:1.6.6'
+                    args '-v $HOME/.aws:/root/.aws'  // Optional: mount AWS creds
+                    }
+                }
             options {
         timeout(time: 30, unit: 'MINUTES')  // Increase from default
     }
@@ -37,12 +43,6 @@ pipeline {
         // STAGE 3: Get terraform output and set environment variables
         stage('Get terraform output') {
             steps {
-                agent {
-                    docker {
-                    image 'hashicorp/terraform:1.6.6'
-                    args '-v $HOME/.aws:/root/.aws'  // Optional: mount AWS creds
-                    }
-                }
                 dir('terraform') {  // Changes directory to terraform/
                 script {
                     // Fetch ECR registry URL from Terraform output
