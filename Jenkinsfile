@@ -37,6 +37,12 @@ pipeline {
         // STAGE 3: Get terraform output and set environment variables
         stage('Get terraform output') {
             steps {
+                agent {
+                    docker {
+                    image 'hashicorp/terraform:1.6.6'
+                    args '-v $HOME/.aws:/root/.aws'  // Optional: mount AWS creds
+                    }
+                }
                 dir('terraform') {  // Changes directory to terraform/
                 script {
                     // Fetch ECR registry URL from Terraform output
