@@ -1,11 +1,10 @@
 pipeline {
     agent {
-        docker { 
-            image 'docker:19.03.12-dind'  // Docker-in-Docker image
-            args '-v /var/run/docker.sock:/var/run/docker.sock'  // Mount Docker socket
+        docker {
+            image '661013218527.dkr.ecr.us-east-1.amazonaws.com/node-app-jenkins:latest'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
-
     environment {
         AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
@@ -26,12 +25,6 @@ pipeline {
         
         // STAGE 2: Terraform (init & apply)
         stage('Terraform Apply') {
-            agent {
-                docker {
-                    image 'hashicorp/terraform:1.6.6'
-                    args '-v $HOME/.aws:/root/.aws'  // Optional: mount AWS creds
-                    }
-                }
             options {
         timeout(time: 30, unit: 'MINUTES')  // Increase from default
     }
@@ -76,13 +69,13 @@ pipeline {
                 dir('nodeapp') {  // Changes directory to terraform/
                 script {
                     // Login to AWS ECR
-                    sh  "aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | sudo docker login --username AWS --password-stdin ${env.REGISTRY}"
+                    sh  "aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${env.REGISTRY}"
 
                     // Build Docker image
-                    sh "sudo docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG} ."
+                    sh "docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG} ."
 
                     // Push to ECR
-                    sh "sudo docker push ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG}"
+                    sh "docker push ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG}"
                 }
             }
         }
