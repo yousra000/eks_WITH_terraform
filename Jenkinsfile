@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker { 
+            image 'docker:19.03.12-dind'  // Docker-in-Docker image
+            args '-v /var/run/docker.sock:/var/run/docker.sock'  // Mount Docker socket
+        }
+    }
 
     environment {
         AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
@@ -22,7 +27,7 @@ pipeline {
         // STAGE 2: Terraform (init & apply)
         stage('Terraform Apply') {
             agent {
-                    docker {
+                docker {
                     image 'hashicorp/terraform:1.6.6'
                     args '-v $HOME/.aws:/root/.aws'  // Optional: mount AWS creds
                     }
