@@ -27,7 +27,15 @@ resource "aws_iam_role_policy_attachment" "nodes-AmazonEC2ContainerRegistryReadO
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.nodes.name
 }
+resource "aws_iam_role_policy_attachment" "nodes-AmazonS3FullAccess" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  role       = aws_iam_role.nodes.name
+}
 
+resource "aws_iam_role_policy_attachment" "nodes-AmazonEC2ContainerRegistryFullAccess" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
+  role       = aws_iam_role.nodes.name
+}
 
 
 resource "aws_eks_node_group" "private-nodes" {
@@ -42,7 +50,7 @@ resource "aws_eks_node_group" "private-nodes" {
   ]
 
   capacity_type  = "ON_DEMAND"
-  instance_types = ["t2.medium"]
+  instance_types = ["t3.medium"]
 
   scaling_config {
     desired_size = 1
@@ -54,6 +62,7 @@ resource "aws_eks_node_group" "private-nodes" {
     max_unavailable = 1
   }
 
+
   labels = {
     node = "kubenode02"
   }
@@ -62,5 +71,7 @@ resource "aws_eks_node_group" "private-nodes" {
     aws_iam_role_policy_attachment.nodes-AmazonEKSWorkerNodePolicy,
     aws_iam_role_policy_attachment.nodes-AmazonEKS_CNI_Policy,
     aws_iam_role_policy_attachment.nodes-AmazonEC2ContainerRegistryReadOnly,
+    aws_iam_role_policy_attachment.nodes-AmazonS3FullAccess,
+    aws_iam_role_policy_attachment.nodes-AmazonEC2ContainerRegistryFullAccess
   ]
 }
