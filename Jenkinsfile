@@ -1,18 +1,12 @@
 pipeline {
-    agent {
-        docker {
-            image '661013218527.dkr.ecr.us-east-1.amazonaws.com/node-app-jenkins:latest'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
+    
     environment {
         AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
         AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
         AWS_DEFAULT_REGION    = 'us-east-1'  // Change to your region
         DOCKER_IMAGE_TAG     = 'latest'
-        DB_PASSWORD        = credentials('DB_PASSWORD')  // Assuming you have a Jenkins credential for DB password
-        DB_USERNAME       = credentials('DB_USERNAME')  // Assuming you have a Jenkins credential for DB password
-    }
+}
 
     options {
         skipDefaultCheckout(false)  // enable automatic SCM checkout

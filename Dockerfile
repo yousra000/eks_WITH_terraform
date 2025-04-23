@@ -43,4 +43,13 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash - && \
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+
+RUN jenkins-plugin-cli --plugins \
+    kubernetes \
+    workflow-aggregator \
+    git \
+    configuration-as-code \
+    credentials \
+    credentials-binding
+
 USER jenkins
