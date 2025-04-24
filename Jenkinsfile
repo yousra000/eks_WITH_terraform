@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image '661013218527.dkr.ecr.us-east-1.amazonaws.com/node-app-jenkins2:latest'  // Use your custom image from ECR
-            args '-u root'  // This allows running as root if you need to install tools
-        }
-    }
+    agent any
     
     environment {
         AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
