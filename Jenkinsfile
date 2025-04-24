@@ -15,23 +15,6 @@ pipeline {
     }
 
 
-    stages {
-        
-        // STAGE 2: Terraform (init & apply)
-        stage('Terraform Apply') {
-            options {
-        timeout(time: 30, unit: 'MINUTES')  // Increase from default
-    }
-            steps {
-                dir('terraform') {  // Changes directory to terraform/
-                    script {
-                        sh 'terraform init'
-                        sh 'terraform apply -auto-approve'
-                    }
-                }
-            }
-}
-
         // STAGE 3: Get terraform output and set environment variables
         stage('Get terraform output') {
             steps {
