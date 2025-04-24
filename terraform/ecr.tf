@@ -1,5 +1,5 @@
 resource "aws_ecr_repository" "app_repo" {
-  name                 = "node-app-jenkins"
+  name                 = "node-app-jenkins3"
 
   image_scanning_configuration {
     scan_on_push = true
