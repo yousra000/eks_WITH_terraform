@@ -24,12 +24,14 @@ pipeline {
         }
 
         stage('Verify Tools') {
-            steps {
-                sh '''
-                    echo "=== Versions ==="
-                    docker --version
-                    aws --version
-                '''
+            container('dockerimage'){
+                steps {
+                    sh '''
+                        echo "=== Versions ==="
+                        docker --version
+                        aws --version
+                    '''
+                }
             }
         }
 
