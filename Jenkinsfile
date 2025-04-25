@@ -3,7 +3,7 @@ podTemplate(
     containers: [
         containerTemplate(
             name: 'dockerimage',
-            image: 'yousra000/dind-aws-terraform:latest',
+            image: 'maeltohamy/jenkins-agent',
             command: '/bin/sh',
             args: '-c "dockerd-entrypoint.sh & sleep infinity"',
             ttyEnabled: true,
