@@ -17,13 +17,14 @@ podTemplate(
     ]
 ) {
     node('jenkins_label') {
+
+        // 💡 Define environment variables inside node
         environment {
             AWS_DEFAULT_REGION = 'us-east-1'
             DOCKER_IMAGE_TAG   = 'latest'
-            }
+        }
+
         stage('Prepare Environment') {
-
-
             container('dockerimage') {
                 sh '''
                     echo "=== Versions ==="
@@ -35,40 +36,45 @@ podTemplate(
         }
 
         stage('Run Pipeline') {
-    container('dockerimage') {
-        withCredentials([
-            string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
-            string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-            sh '''
-                echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-                echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
-                aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
-                aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-                aws sts get-caller-identity  # Verify AWS credentials work
-            '''
-            
-            dir('terraform') {
-                sh 'terraform init'
-                REGISTRY = sh(
-                    script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
-                    returnStdout: true
-                ).trim()
-                REPOSITORY = sh(
-                    script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
-                    returnStdout: true
-                ).trim()
-            }
+            container('dockerimage') {
+                withCredentials([
+                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
+                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    sh '''
+                        echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
+                        echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
+                        aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+                        aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+                        aws configure set region "$AWS_DEFAULT_REGION"
+                        aws sts get-caller-identity
+                    '''
 
-            dir('nodeapp') {
-                sh """
-                    aws ecr get-login-password | docker login --username AWS --password-stdin ${REGISTRY}
-                    docker build -t ${REGISTRY}/${REPOSITORY}:latest .
-                    docker push ${REGISTRY}/${REPOSITORY}:latest
-                """
+                    dir('terraform') {
+                        script {
+                            REGISTRY = sh(
+                                script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
+                                returnStdout: true
+                            ).trim()
+                            REPOSITORY = sh(
+                                script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
+                                returnStdout: true
+                            ).trim()
+
+                            env.REGISTRY = REGISTRY
+                            env.REPOSITORY = REPOSITORY
+                        }
+                    }
+
+                    dir('nodeapp') {
+                        sh """
+                            aws ecr get-login-password | docker login --username AWS --password-stdin ${REGISTRY}
+                            docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
+                            docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
+                        """
+                    }
+                }
             }
         }
-    }
-}
     }
 }
