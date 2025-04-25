@@ -56,27 +56,27 @@ podTemplate(
                 ).trim()
             }
 
-            dir('nodeapp') {
-                        script {
-                            // AWS ECR login
-                            sh """
-                                aws ecr get-login-password --region ${env.AWS_DEFAULT_REGION} | \
-                                docker login --username AWS --password-stdin ${env.REGISTRY}
-                            """
-                            
-                            // Docker build
-                            sh """
-                                docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
-                            """
-                            
-                            // Docker push
-                            sh """
-                                docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
-                            """
-                        }
-                    }
+        dir('nodeapp') {
+            script {
+                // AWS ECR login (AWS CLI v1)
+                sh """
+                    aws ecr get-login --region ${env.AWS_DEFAULT_REGION} --no-include-email | \
+                    docker login --username AWS --password-stdin ${env.REGISTRY}
+                """
+                
+                // Docker build
+                sh """
+                    docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
+                """
+                
+                // Docker push
+                sh """
+                    docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
+                """
+            }
         }
     }
+}
 }
     }
 }
