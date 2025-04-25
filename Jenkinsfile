@@ -9,7 +9,7 @@ podTemplate(
             ttyEnabled: true,
             privileged: true,
             volumeMounts: [
-                // Mount Docker socket to container
+                // Correct volumeMount usage
                 volumeMount(
                     mountPath: '/var/run/docker.sock',
                     name: 'docker-socket'
@@ -18,9 +18,10 @@ podTemplate(
         )
     ],
     volumes: [
-        persistentVolumeClaim(
-            claimName: 'docker-socket-pvc',
-            mountPath: '/var/run/docker.sock'
+        // Ensure you are correctly specifying the volume type for the Docker socket
+        hostPathVolume(
+            mountPath: '/var/run/docker.sock',
+            hostPath: '/var/run/docker.sock'
         )
     ]
 ) {
