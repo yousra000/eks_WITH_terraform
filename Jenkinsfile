@@ -4,9 +4,10 @@ podTemplate(
         containerTemplate(
             name: 'dockerimage',
             image: 'yousra000/dind-aws-terraform:latest',
-            command: 'sleep',
-            args: '9999999',
-            ttyEnabled: true
+            command: 'dockerd-entrypoint.sh',
+            args: '--host tcp://0.0.0.0:2375 --host unix:///var/run/docker.sock',
+            ttyEnabled: true,
+            privileged: true
         )
     ],
     volumes: [
@@ -63,6 +64,7 @@ podTemplate(
 
                     dir('nodeapp') {
                         sh """
+                            export DOCKER_HOST=tcp://localhost:2375
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
                             docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
                             docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
