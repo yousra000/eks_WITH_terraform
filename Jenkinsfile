@@ -44,43 +44,28 @@ podTemplate(
                         aws sts get-caller-identity
                     '''
 
-                    // Get ECR repository info with ANSI color codes stripped
-                    dir('terraform') {
-                        script {
-                            sh 'terraform init'
-                            
-                            // Strip ANSI colors using sed
-                            def rawOutput = sh(
-                                script: 'terraform output -raw aws_ecr_repository',
-                                returnStdout: true
-                            ).trim()
-                            
-                            // Clean output and set environment variables
-                            env.REGISTRY = rawOutput.replaceAll(/\[[\d;]+[mK]/, '').split('/')[0]
-                            env.REPOSITORY = rawOutput.replaceAll(/\[[\d;]+[mK]/, '').split('/')[1]
-                            
-                            // Verify values
-                            echo "Cleaned REGISTRY: ${env.REGISTRY}"
-                            echo "Cleaned REPOSITORY: ${env.REPOSITORY}"
-                        }
-                    }
+             dir('terraform') {
+                sh 'terraform init'
+                REGISTRY = sh(
+                    script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
+                    returnStdout: true
+                ).trim()
+                REPOSITORY = sh(
+                    script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
+                    returnStdout: true
+                ).trim()
+            }
 
-                    // Build and push Docker image
-                    dir('nodeapp') {
-                        script {
-                            sh """
-                                # Get ECR login token and login
-                                aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
-                                docker login --username AWS --password-stdin ${env.REGISTRY}
-                                
-                                # Build and push image
-                                docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
-                                docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
-                            """
-                        }
-                    }
-                }
+            dir('nodeapp') {
+                sh """
+                    aws ecr get-login-password | docker login --username AWS --password-stdin ${REGISTRY}
+                    docker build -t ${REGISTRY}/${REPOSITORY}:latest .
+                    docker push ${REGISTRY}/${REPOSITORY}:latest
+                """
             }
         }
     }
 }
+    }
+}
+
