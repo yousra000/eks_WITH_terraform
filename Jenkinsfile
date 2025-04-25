@@ -7,8 +7,7 @@ podTemplate(
             command: '/bin/sh',
             args: '-c "dockerd-entrypoint.sh & sleep infinity"',
             ttyEnabled: true,
-            privileged: true,
-            runAsUser: '0' // <-- This makes the container run as root
+            privileged: true
         )
     ]
 ) {
@@ -16,18 +15,6 @@ podTemplate(
 
         env.AWS_DEFAULT_REGION = 'us-east-1'
         env.DOCKER_IMAGE_TAG = 'latest'
-
-        stage('Print sudoers file') {
-            container('dockerimage') {
-                sh '''
-                    echo "=== Current User ==="
-                    whoami
-
-                    echo "=== /etc/sudoers ==="
-                    cat /etc/sudoers
-                '''
-            }
-        }
 
         stage('Prepare Environment') {
             container('dockerimage') {
@@ -42,6 +29,7 @@ podTemplate(
 
         stage('Clone Repo') {
             container('dockerimage') {
+                // Remove existing directory if it exists
                 sh 'rm -rf eks_WITH_terraform'
                 sh 'git clone https://github.com/yousra000/eks_WITH_terraform.git'
                 dir('eks_WITH_terraform') {
