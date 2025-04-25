@@ -4,8 +4,8 @@ podTemplate(
         containerTemplate(
             name: 'dockerimage',
             image: 'yousra000/dind-aws-terraform:latest',
-            command: 'dockerd-entrypoint.sh',
-            args: '',
+            command: '/bin/sh',
+            args: '-c "dockerd-entrypoint.sh & sleep infinity"',
             ttyEnabled: true,
             privileged: true
         )
