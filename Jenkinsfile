@@ -67,9 +67,9 @@ podTemplate(
                         echo "REPOSITORY=${env.REPOSITORY}"
                     }
 
-                    dir('eks_WITH_terraform/nodeapp') {
+                    dir('nodeapp') {
                         sh """
-                            echo "Current Directory: \$(pwd)"
+                            pwd
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
                             docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
                             docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
