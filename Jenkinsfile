@@ -24,8 +24,8 @@ pipeline {
         }
 
         stage('Verify Tools') {
-            container('dockerimage'){
-                steps {
+            steps {
+                container('dockerimage'){
                     sh '''
                         echo "=== Versions ==="
                         docker --version
