@@ -1,21 +1,26 @@
 podTemplate(
-    label: 'jenkins-label',
+    label: 'jenkins_label',
     containers: [
         containerTemplate(
-            name: 'dind',
-            image: 'docker:dind',
-            command: 'dockerd-entrypoint.sh --host=tcp://0.0.0.0:2375 --host=unix:///var/run/docker.sock',
+            name: 'dockerimage',
+            image: 'maeltohamy/jenkins-agent',
+            command: 'sleep',
+            args: '99999',
             ttyEnabled: true,
-            privileged: true
-        ),
-        containerTemplate(
-            name: 'docker-cli',
-            image: 'docker:latest',
-            command: 'cat',
-            ttyEnabled: true,
-            envVars: [
-                envVar(key: 'DOCKER_HOST', value: 'tcp://localhost:2375')
+            privileged: true,
+            volumeMounts: [
+                // Mount Docker socket to container
+                volumeMount(
+                    mountPath: '/var/run/docker.sock',
+                    name: 'docker-socket'
+                )
             ]
+        )
+    ],
+    volumes: [
+        persistentVolumeClaim(
+            claimName: 'docker-socket-pvc',
+            mountPath: '/var/run/docker.sock'
         )
     ]
 ) {
