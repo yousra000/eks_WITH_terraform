@@ -45,7 +45,7 @@ podTemplate(
                         echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
                         echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
 
-                        # Directly configure AWS CLI with the credentials and region for each command
+                        # Ensure the region is passed properly by using ${AWS_DEFAULT_REGION} 
                         aws sts get-caller-identity --region ${AWS_DEFAULT_REGION}
                     '''
 
@@ -67,7 +67,7 @@ podTemplate(
 
                     dir('nodeapp') {
                         sh """
-                            # Log in to ECR and push Docker image, passing region explicitly
+                            # Ensure the region is passed correctly to aws login and docker push
                             aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${REGISTRY}
                             docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
                             docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
