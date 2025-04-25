@@ -7,14 +7,7 @@ podTemplate(
             command: 'sleep',
             args: '99999',
             ttyEnabled: true,
-            privileged: true,
-            volumeMounts: [
-                // Mount Docker socket to container (Corrected)
-                volumeMount(
-                    mountPath: '/var/run/docker.sock',
-                    name: 'docker-socket'
-                )
-            ]
+            privileged: true
         )
     ],
     volumes: [
