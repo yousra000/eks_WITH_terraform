@@ -17,11 +17,9 @@ podTemplate(
     ]
 ) {
     node('jenkins_label') {
-        // Define environment variables inside node
-        environment {
-            AWS_DEFAULT_REGION = 'us-east-1'
-            DOCKER_IMAGE_TAG   = 'latest'
-        }
+        // Define environment variables
+        env.AWS_DEFAULT_REGION = 'us-east-1'
+        env.DOCKER_IMAGE_TAG = 'latest'
 
         stage('Prepare Environment') {
             container('dockerimage') {
@@ -50,29 +48,33 @@ podTemplate(
                         aws sts get-caller-identity
                     '''
                     
-                    // Terraform steps
+                    // Check if Terraform files exist
+                    def tfFiles = findFiles(glob: 'terraform/*.tf')
+                    if (tfFiles.length == 0) {
+                        error "No Terraform configuration files found in terraform directory"
+                    }
+
                     dir('terraform') {
                         sh 'terraform init'
-                        REGISTRY = sh(
+                        env.REGISTRY = sh(
                             script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
                             returnStdout: true
                         ).trim()
-                        REPOSITORY = sh(
+                        env.REPOSITORY = sh(
                             script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
                             returnStdout: true
                         ).trim()
                     }
 
-                    // Docker steps
                     dir('nodeapp') {
                         sh """
-                            aws ecr get-login-password | docker login --username AWS --password-stdin ${REGISTRY}
-                            docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
-                            docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
+                            aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
+                            docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
+                            docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
                         """
                     }
                 }
             }
         }
-    }  // This closes the node block
-}  // This closes the podTemplate block
+    }
+}
