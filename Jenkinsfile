@@ -13,6 +13,11 @@ podTemplate(
         hostPathVolume(
             mountPath: '/var/run/docker.sock',
             hostPath: '/var/run/docker.sock'
+        ),
+        // Mount the workspace to use the Terraform state file if needed
+        hostPathVolume(
+            mountPath: '/workspace',
+            hostPath: '/path/to/your/terraform/directory'
         )
     ]
 ) {
@@ -44,36 +49,44 @@ podTemplate(
                         aws sts get-caller-identity
                     '''
 
-                    // Fetch the ECR repository URL dynamically from AWS
-                    env.ECR_REGISTRY = sh(
-                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryUri" --output text',
-                        returnStdout: true
-                    ).trim()
+                    // Terraform Init to ensure state is loaded and backend is configured
+                    dir('terraform') {
+                        sh 'terraform init'
+                    }
 
-                    env.REPOSITORY = sh(
-                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryName" --output text',
-                        returnStdout: true
-                    ).trim()
+                    // Retrieve the ECR registry and repository from Terraform outputs
+                    dir('terraform') {
+                        env.REGISTRY = sh(
+                            script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
+                            returnStdout: true
+                        ).trim()
+                        env.REPOSITORY = sh(
+                            script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
+                            returnStdout: true
+                        ).trim()
+                    }
 
-                    echo "ECR_REGISTRY=${env.ECR_REGISTRY}"
+                    // Output the REGISTRY and REPOSITORY to verify
+                    echo "REGISTRY=${env.REGISTRY}"
                     echo "REPOSITORY=${env.REPOSITORY}"
 
-                    // AWS ECR login
-                    sh """
-                        aws ecr get-login --region ${env.AWS_DEFAULT_REGION} --no-include-email | \
-                        docker login --username AWS --password-stdin ${env.ECR_REGISTRY}
-                    """
-
+                    // Perform Docker login, build, and push steps
                     dir('nodeapp') {
                         script {
+                            // AWS ECR login (AWS CLI v1 compatible)
+                            sh """
+                                aws ecr get-login --region ${env.AWS_DEFAULT_REGION} --no-include-email | \
+                                docker login --username AWS --password-stdin ${env.REGISTRY}
+                            """
+
                             // Docker build
                             sh """
-                                docker build -t ${env.ECR_REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
+                                docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
                             """
 
                             // Docker push
                             sh """
-                                docker push ${env.ECR_REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
+                                docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
                             """
                         }
                     }
