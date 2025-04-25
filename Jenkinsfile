@@ -8,7 +8,7 @@ podTemplate(
             args: '-c "dockerd-entrypoint.sh & sleep infinity"',
             ttyEnabled: true,
             privileged: true,
-            volumes: ['/var/run/docker.sock:/var/run/docker.sock', '/home/jenkins/agent/workspace:/workspace']  // Mounting host workspace to the container
+            volumes: ['/var/run/docker.sock:/var/run/docker.sock', '/home/jenkins/agent:/workspace']  // Mounting Jenkins workspace to the container
         )
     ]
 ) {
