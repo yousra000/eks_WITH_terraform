@@ -17,7 +17,13 @@ podTemplate(
     ]
 ) {
     node('jenkins_label') {
+        environment {
+            AWS_DEFAULT_REGION = 'us-east-1'
+            DOCKER_IMAGE_TAG   = 'latest'
+            }
         stage('Prepare Environment') {
+
+
             container('dockerimage') {
                 sh '''
                     echo "=== Versions ==="
