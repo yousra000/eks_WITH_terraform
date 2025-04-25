@@ -17,14 +17,11 @@ podTemplate(
     ]
 ) {
     node('jenkins_label') {
+        // Environment setup
+        env.AWS_DEFAULT_REGION = 'us-east-1'
+        env.DOCKER_IMAGE_TAG = 'latest'
 
-        // Define environment variables inside node
-        environment {
-            AWS_DEFAULT_REGION = 'us-east-1'
-            DOCKER_IMAGE_TAG   = 'latest'
-            AWS_PAGER = ''  // Disable AWS CLI pager (removes color codes)
-        }
-
+        // STAGE 1: Prepare Environment
         stage('Prepare Environment') {
             container('dockerimage') {
                 sh '''
@@ -36,41 +33,49 @@ podTemplate(
             }
         }
 
+        // STAGE 2: Run Pipeline
         stage('Run Pipeline') {
             container('dockerimage') {
                 withCredentials([
                     string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
+                    // Configure AWS and verify credentials
                     sh '''
-                        echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
-                        echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
-                        aws sts get-caller-identity --region ${AWS_DEFAULT_REGION}
+                        aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+                        aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+                        aws configure set region $AWS_DEFAULT_REGION
+                        aws sts get-caller-identity
                     '''
 
+                    // STAGE 2.1: Terraform Init & Output
                     dir('terraform') {
                         script {
-                            REGISTRY = sh(
+                            sh 'terraform init'
+                            
+                            env.REGISTRY = sh(
                                 script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
                                 returnStdout: true
                             ).trim()
-                            REPOSITORY = sh(
+                            
+                            env.REPOSITORY = sh(
                                 script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
                                 returnStdout: true
                             ).trim()
-
-                            env.REGISTRY = REGISTRY
-                            env.REPOSITORY = REPOSITORY
                         }
                     }
 
+                    // STAGE 2.2: Build & Push Docker Image
                     dir('nodeapp') {
-                        sh """
-                            # Disable pager to avoid color codes in the AWS CLI output
-                            aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${REGISTRY}
-                            docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
-                            docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
-                        """
+                        script {
+                            sh """
+                                aws ecr get-login-password --region $AWS_DEFAULT_REGION | \
+                                docker login --username AWS --password-stdin ${env.REGISTRY}
+                                
+                                docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
+                                docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
+                            """
+                        }
                     }
                 }
             }
