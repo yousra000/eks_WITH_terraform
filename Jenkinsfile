@@ -37,6 +37,7 @@ pipeline {
 
         stage('AWS Configure') {
             steps {
+                container('dockerimage'){
                 sh '''
                     aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
                     aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
@@ -44,40 +45,44 @@ pipeline {
                     aws sts get-caller-identity
                 '''
             }
+            }
         }
 
         stage('Get ECR Info') {
             steps {
-                script {
-                    env.REGISTRY = sh(
-                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryUri" --output text | cut -d "/" -f1',
-                        returnStdout: true
-                    ).trim()
+                container('dockerimage'){
+                    script {
+                        env.REGISTRY = sh(
+                            script: 'aws ecr describe-repositories --query "repositories[0].repositoryUri" --output text | cut -d "/" -f1',
+                            returnStdout: true
+                        ).trim()
 
-                    env.REPOSITORY = sh(
-                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryName" --output text',
-                        returnStdout: true
-                    ).trim()
+                        env.REPOSITORY = sh(
+                            script: 'aws ecr describe-repositories --query "repositories[0].repositoryName" --output text',
+                            returnStdout: true
+                        ).trim()
 
-                    echo "REGISTRY=${env.REGISTRY}"
-                    echo "REPOSITORY=${env.REPOSITORY}"
-                }
-            }
+                        echo "REGISTRY=${env.REGISTRY}"
+                        echo "REPOSITORY=${env.REPOSITORY}"
+                    }
+            }   }
         }
 
         stage('Build & Push Docker Image') {
             steps {
-                dir('nodeapp') {
-                    script {
-                        sh """
-                            aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | \
-                            docker login --username AWS --password-stdin ${env.REGISTRY}
-                        """
+                container('dockerimage'){
+                    dir('nodeapp') {
+                        script {
+                            sh """
+                                aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | \
+                                docker login --username AWS --password-stdin ${env.REGISTRY}
+                            """
 
-                        sh """
-                            docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG} .
-                            docker push ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG}
-                        """
+                            sh """
+                                docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG} .
+                                docker push ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG}
+                            """
+                        }
                     }
                 }
             }
