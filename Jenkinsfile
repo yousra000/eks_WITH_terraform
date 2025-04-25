@@ -51,8 +51,15 @@ podTemplate(
 
                     // Terraform Init to ensure state is loaded and backend is configured
                     dir('terraform') {
-                        sh 'terraform init'
-                    }
+    // Print the current working directory
+    sh 'pwd'
+    
+    // List files in the directory
+    sh 'ls -al'
+
+    // Run Terraform commands after confirming the correct directory
+    sh 'terraform init'
+     sh 'terraform refresh'               }
 
                     // Retrieve the ECR registry and repository from Terraform outputs
                     dir('terraform') {
