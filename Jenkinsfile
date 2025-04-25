@@ -29,11 +29,14 @@ podTemplate(
 
         stage('Clone Repo') {
             container('dockerimage') {
+                // Remove existing directory if it exists
+                sh 'rm -rf eks_WITH_terraform'
                 sh 'git clone https://github.com/yousra000/eks_WITH_terraform.git'
-                sh 'cd eks_WITH_terraform'
-                sh 'git remote -v'  // Check the remote URL configuration
-                sh 'git status'     // Check the status of the repository after cloning
-                sh 'ls -lr'         // List the files/folders to ensure the repo is cloned correctly
+                dir('eks_WITH_terraform') {
+                    sh 'git remote -v'
+                    sh 'git status'
+                    sh 'ls -lr'
+                }
             }
         }
 
