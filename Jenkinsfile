@@ -1,5 +1,3 @@
-
-
 podTemplate(
     label: 'jenkins_label',
     containers: [
@@ -9,7 +7,8 @@ podTemplate(
             command: '/bin/sh',
             args: '-c "dockerd-entrypoint.sh & sleep infinity"',
             ttyEnabled: true,
-            privileged: true
+            privileged: true,
+            volumes: ['/var/run/docker.sock:/var/run/docker.sock', '/home/jenkins/agent/workspace:/workspace']  // Mounting host workspace to the container
         )
     ]
 ) {
@@ -29,6 +28,19 @@ podTemplate(
             }
         }
 
+        stage('Clone Repo') {
+            container('dockerimage') {
+                // Remove existing directory if it exists
+                sh 'rm -rf /workspace/eks_WITH_terraform'
+                sh 'git clone https://github.com/yousra000/eks_WITH_terraform.git /workspace/eks_WITH_terraform'
+                sh 'ls -la /workspace'
+                dir('/workspace/eks_WITH_terraform') {
+                    sh 'git remote -v'
+                    sh 'git status'
+                    sh 'ls -lr'
+                }
+            }
+        }
 
         stage('Run Pipeline') {
             container('dockerimage') {
@@ -57,13 +69,7 @@ podTemplate(
                         echo "REPOSITORY=${env.REPOSITORY}"
                     }
 
-        stage('Clone Repo') {
-            container('dockerimage') {
-                // Remove existing directory if it exists
-                sh 'rm -rf eks_WITH_terraform'
-                sh 'git clone https://github.com/yousra000/eks_WITH_terraform.git'
-                sh 'ls -la '
-                dir('eks_WITH_terraform/nodeapp') {
+                    dir('/workspace/eks_WITH_terraform/nodeapp') {
                         sh """
                             echo "Current Directory: \$(pwd)"
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
@@ -72,13 +78,6 @@ podTemplate(
                         """
                     }
                 }
-                // dir('eks_WITH_terraform') {
-                //     sh 'git remote -v'
-                //     sh 'git status'
-                //     sh 'ls -lr'
-                // }
-            }
-        }
             }
         }
     }
