@@ -5,7 +5,7 @@ podTemplate(
             name: 'dockerimage',
             image: 'yousra000/dind-aws-terraform:latest',
             command: '/bin/sh',
-            args: '-c "dockerd-entrypoint.sh & sleep infinity"',
+            args: '-c "git clone https://github.com/yousra000/eks_WITH_terraform && dockerd-entrypoint.sh & sleep infinity"',
             ttyEnabled: true,
             privileged: true
         )
@@ -58,7 +58,6 @@ podTemplate(
                     dir('nodeapp') {
                         sh """
                             pwd
-                            ls
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
                             docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
                             docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
