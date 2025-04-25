@@ -1,13 +1,21 @@
 podTemplate(
-    label: 'jenkins_label',
+    label: 'jenkins-label',
     containers: [
         containerTemplate(
-            name: 'dockerimage',
-            image: 'maeltohamy/jenkins-agent',
-            command: 'sleep',
-            args: '99999',
+            name: 'dind',
+            image: 'docker:dind',
+            command: 'dockerd-entrypoint.sh --host=tcp://0.0.0.0:2375 --host=unix:///var/run/docker.sock',
             ttyEnabled: true,
-            privileged: true  // This is necessary for Docker-in-Docker
+            privileged: true
+        ),
+        containerTemplate(
+            name: 'docker-cli',
+            image: 'docker:latest',
+            command: 'cat',
+            ttyEnabled: true,
+            envVars: [
+                envVar(key: 'DOCKER_HOST', value: 'tcp://localhost:2375')
+            ]
         )
     ]
 ) {
@@ -57,8 +65,7 @@ podTemplate(
 
                     dir('nodeapp') {
                         sh """
-                            aws ecr get-login-password
-                            docker login --username AWS --password-stdin ${env.REGISTRY}
+                            aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
                             docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
                             docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
                         """
