@@ -17,9 +17,13 @@ podTemplate(
     ]
 ) {
     node('jenkins_label') {
-        // Define environment variables
-        env.AWS_DEFAULT_REGION = 'us-east-1'
-        env.DOCKER_IMAGE_TAG = 'latest'
+
+        // Define environment variables inside node
+        environment {
+            AWS_DEFAULT_REGION = 'us-east-1'
+            DOCKER_IMAGE_TAG   = 'latest'
+            AWS_PAGER = ''  // Disable AWS CLI pager (removes color codes)
+        }
 
         stage('Prepare Environment') {
             container('dockerimage') {
@@ -39,51 +43,33 @@ podTemplate(
                     string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
                 ]) {
                     sh '''
-                        # Configure AWS CLI
-                        aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
-                        aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-                        aws configure set region us-east-1
-                        
-                        # Verify credentials
-                        aws sts get-caller-identity
+                        echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
+                        echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
+                        aws sts get-caller-identity --region ${AWS_DEFAULT_REGION}
                     '''
-                    
-                    // Verify Terraform files exist
-                    sh 'ls -la terraform/ || echo "No terraform directory found"'
-                    
+
                     dir('terraform') {
-                        // Initialize Terraform
-                        sh 'terraform init -input=false'
-                        
-                        // Get outputs (with error handling)
                         script {
-                            try {
-                                env.REGISTRY = sh(
-                                    script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
-                                    returnStdout: true
-                                ).trim()
-                                env.REPOSITORY = sh(
-                                    script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
-                                    returnStdout: true
-                                ).trim()
-                                
-                                if (!env.REGISTRY || !env.REPOSITORY) {
-                                    error "Failed to get ECR repository information from Terraform outputs"
-                                }
-                            } catch (Exception e) {
-                                error "Terraform output failed: ${e.getMessage()}"
-                            }
+                            REGISTRY = sh(
+                                script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
+                                returnStdout: true
+                            ).trim()
+                            REPOSITORY = sh(
+                                script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
+                                returnStdout: true
+                            ).trim()
+
+                            env.REGISTRY = REGISTRY
+                            env.REPOSITORY = REPOSITORY
                         }
                     }
 
                     dir('nodeapp') {
                         sh """
-                            # Login to ECR
-                            aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
-                            
-                            # Build and push image
-                            docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
-                            docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
+                            # Disable pager to avoid color codes in the AWS CLI output
+                            aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${REGISTRY}
+                            docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
+                            docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
                         """
                     }
                 }
