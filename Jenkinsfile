@@ -3,18 +3,11 @@ podTemplate(
     containers: [
         containerTemplate(
             name: 'dockerimage',
-            image: 'maeltohamy/jenkins-agent',
-            command: 'sleep',
-            args: '99999',
+            image: 'yousra000/dind-aws-terraform:latest',
+            command: 'dockerd-entrypoint.sh',
+            args: '',
             ttyEnabled: true,
             privileged: true
-        )
-    ],
-    volumes: [
-        // Ensure you are correctly specifying the volume type for Docker socket
-        hostPathVolume(
-            mountPath: '/var/run/docker.sock',
-            hostPath: '/var/run/docker.sock'
         )
     ]
 ) {
