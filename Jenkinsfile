@@ -54,6 +54,8 @@ podTemplate(
                             script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
                             returnStdout: true
                         ).trim()
+                        echo "REGISTRY=${env.REGISTRY}"
+                        echo "REPOSITORY=${env.REPOSITORY}"
                     }
 
                     dir('nodeapp') {
@@ -83,3 +85,5 @@ podTemplate(
         }
     }
 }
+
+
