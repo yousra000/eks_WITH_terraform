@@ -32,6 +32,7 @@ podTemplate(
                 // Remove existing directory if it exists
                 sh 'rm -rf eks_WITH_terraform'
                 sh 'git clone https://github.com/yousra000/eks_WITH_terraform.git'
+                sh 'ls '
                 dir('eks_WITH_terraform') {
                     sh 'git remote -v'
                     sh 'git status'
