@@ -21,6 +21,7 @@ podTemplate(
                 sh '''
                     echo "=== Versions ==="
                     docker --version
+                    git --version
                     aws --version
                 '''
             }
