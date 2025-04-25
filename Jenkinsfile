@@ -44,14 +44,9 @@ podTemplate(
                     sh '''
                         echo "AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID"
                         echo "AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY"
-                        
-                        # Set AWS region
-                        aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
-                        aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-                        aws configure set region "${AWS_DEFAULT_REGION}"
-                        
-                        # Verify AWS credentials
-                        aws sts get-caller-identity
+
+                        # Directly configure AWS CLI with the credentials and region for each command
+                        aws sts get-caller-identity --region ${AWS_DEFAULT_REGION}
                     '''
 
                     dir('terraform') {
@@ -72,7 +67,7 @@ podTemplate(
 
                     dir('nodeapp') {
                         sh """
-                            # Log in to ECR and push Docker image
+                            # Log in to ECR and push Docker image, passing region explicitly
                             aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${REGISTRY}
                             docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
                             docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
