@@ -4,8 +4,8 @@ podTemplate(
         containerTemplate(
             name: 'dockerimage',
             image: 'maeltohamy/jenkins-agent',
-            command: 'sleep',
-            args: '99999',
+            command: 'sh',
+            args: '-c "dockerd & sleep 99999"', // Start Docker daemon in the background and keep container alive
             ttyEnabled: true,
             privileged: true
         )
