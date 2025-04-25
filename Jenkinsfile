@@ -17,7 +17,7 @@ podTemplate(
         // Mount the workspace to use the Terraform state file if needed
         hostPathVolume(
             mountPath: '/workspace',
-            hostPath: '/path/to/your/terraform/directory'
+            hostPath: '/terraform/terraform.tfstate'
         )
     ]
 ) {
