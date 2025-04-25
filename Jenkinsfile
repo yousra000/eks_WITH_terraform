@@ -1,88 +1,82 @@
-podTemplate(
-    label: 'jenkins_label',
-    containers: [
-        containerTemplate(
-            name: 'dockerimage',
-            image: 'maeltohamy/jenkins-agent',
-            command: '/bin/sh',
-            args: '-c "dockerd-entrypoint.sh & sleep infinity"',
-            ttyEnabled: true,
-            privileged: true
-        )
-    ]
-) {
-    node('jenkins_label') {
+pipeline {
+    agent {
+        label 'jenkins_label'
+    }
 
-        env.AWS_DEFAULT_REGION = 'us-east-1'
-        env.DOCKER_IMAGE_TAG = 'latest'
+    environment {
+        AWS_ACCESS_KEY_ID     = credentials('AWS_ACCESS_KEY_ID')
+        AWS_SECRET_ACCESS_KEY = credentials('AWS_SECRET_ACCESS_KEY')
+        AWS_DEFAULT_REGION    = 'us-east-1'
+        DOCKER_IMAGE_TAG      = 'latest'
+    }
 
-        stage('Prepare Environment') {
-            container('dockerimage') {
+    options {
+        skipDefaultCheckout(false)
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Verify Tools') {
+            steps {
                 sh '''
                     echo "=== Versions ==="
                     docker --version
-                    git --version
                     aws --version
                 '''
             }
         }
 
-        stage('Clone Repo') {
-            container('dockerimage') {
-                // Remove existing directory if it exists
-                sh 'rm -rf eks_WITH_terraform'
-                sh 'git clone https://github.com/yousra000/eks_WITH_terraform.git'
-                dir('eks_WITH_terraform') {
-                    sh 'git remote -v'
-                    sh 'git status'
-                    sh 'ls -lr'
+        stage('AWS Configure') {
+            steps {
+                sh '''
+                    aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
+                    aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
+                    aws configure set region $AWS_DEFAULT_REGION
+                    aws sts get-caller-identity
+                '''
+            }
+        }
+
+        stage('Get ECR Info') {
+            steps {
+                script {
+                    env.REGISTRY = sh(
+                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryUri" --output text | cut -d "/" -f1',
+                        returnStdout: true
+                    ).trim()
+
+                    env.REPOSITORY = sh(
+                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryName" --output text',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "REGISTRY=${env.REGISTRY}"
+                    echo "REPOSITORY=${env.REPOSITORY}"
                 }
             }
         }
 
-        stage('Run Pipeline') {
-            container('dockerimage') {
-                withCredentials([
-                    string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'),
-                    string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')
-                ]) {
-                    sh '''
-                        aws configure set aws_access_key_id "$AWS_ACCESS_KEY_ID"
-                        aws configure set aws_secret_access_key "$AWS_SECRET_ACCESS_KEY"
-                        aws configure set region us-east-1
-                    '''
-
+        stage('Build & Push Docker Image') {
+            steps {
+                dir('nodeapp') {
                     script {
-                        env.REGISTRY = sh(
-                            script: 'aws ecr describe-repositories --query "repositories[0].repositoryUri" --output text | cut -d "/" -f1',
-                            returnStdout: true
-                        ).trim()
-
-                        env.REPOSITORY = sh(
-                            script: 'aws ecr describe-repositories --query "repositories[0].repositoryName" --output text',
-                            returnStdout: true
-                        ).trim()
-
-                        echo "REGISTRY=${env.REGISTRY}"
-                        echo "REPOSITORY=${env.REPOSITORY}"
-                        cd nodeapp
                         sh """
-                            aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
-                            docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
-                            docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
+                            aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | \
+                            docker login --username AWS --password-stdin ${env.REGISTRY}
                         """
-                        
-                    }
 
-                    // dir('eks_WITH_terraform/nodeapp') {
-                    //     sh """
-                    //         pwd
-                    //         ls
-                    //         aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
-                    //         docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
-                    //         docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
-                    //     """
-                    // }
+                        sh """
+                            docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG} .
+                            docker push ${env.REGISTRY}/${env.REPOSITORY}:${DOCKER_IMAGE_TAG}
+                        """
+                    }
                 }
             }
         }
