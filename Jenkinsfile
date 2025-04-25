@@ -5,7 +5,7 @@ podTemplate(
             name: 'dockerimage',
             image: 'yousra000/dind-aws-terraform:latest',
             command: '/bin/sh',
-            args: '-c "git clone https://github.com/yousra000/eks_WITH_terraform && dockerd-entrypoint.sh & sleep infinity"',
+            args: '-c "dockerd-entrypoint.sh & sleep infinity"',
             ttyEnabled: true,
             privileged: true
         )
@@ -21,6 +21,10 @@ podTemplate(
                     echo "=== Versions ==="
                     docker --version
                     aws --version
+                    echo "=== Current Directory ==="
+                    pwd
+                    echo "=== Directory Contents ==="
+                    ls -al
                 '''
             }
         }
@@ -56,12 +60,14 @@ podTemplate(
                     }
 
                     dir('nodeapp') {
-                        sh """
+                        sh '''
+                            echo "=== Inside nodeapp directory ==="
                             pwd
-                            aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
-                            docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
-                            docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
-                        """
+                            ls -al
+                            aws ecr get-login-password | docker login --username AWS --password-stdin ${REGISTRY}
+                            docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
+                            docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
+                        '''
                     }
                 }
             }
