@@ -29,6 +29,7 @@ podTemplate(
         stage('Clone Repo') {
             container('dockerimage') {
                 sh 'git clone https://github.com/yousra000/eks_WITH_terraform.git'
+                ls -lr 
             }
         }
 
