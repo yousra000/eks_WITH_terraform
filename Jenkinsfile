@@ -21,11 +21,12 @@ podTemplate(
                     echo "=== Versions ==="
                     docker --version
                     aws --version
-                    echo "=== Current Directory ==="
-                    pwd
-                    echo "=== Directory Contents ==="
-                    ls -al
                 '''
+            }
+        }
+        stage('Clone Repo') {
+            container('dockerimage') {
+                sh 'git clone https://github.com/yousra000/eks_WITH_terraform'
             }
         }
 
@@ -58,18 +59,14 @@ podTemplate(
                         echo "REGISTRY=${env.REGISTRY}"
                         echo "REPOSITORY=${env.REPOSITORY}"
                     }
-
-                    dir('nodeapp') {
-                        sh '''
-                            echo "=== Inside nodeapp directory ==="
+                    dir('eks_WITH_terraform/nodeapp') {
+                        sh """
                             pwd
-                            ls -al
-                            aws ecr get-login-password | docker login --username AWS --password-stdin ${REGISTRY}
-                            docker build -t ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG} .
-                            docker push ${REGISTRY}/${REPOSITORY}:${DOCKER_IMAGE_TAG}
-                        '''
+                            aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
+                            docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
+                            docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
+                        """
                     }
-                }
             }
         }
     }
