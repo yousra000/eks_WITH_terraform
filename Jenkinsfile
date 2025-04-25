@@ -3,7 +3,7 @@ podTemplate(
     containers: [
         containerTemplate(
             name: 'dockerimage',
-            image: 'yousra000/dind-aws-terraform:latest',
+            image: 'maeltohamy/jenkins-agent',
             command: 'dockerd-entrypoint.sh',
             args: '--host tcp://0.0.0.0:2375 --host unix:///var/run/docker.sock',
             ttyEnabled: true,
