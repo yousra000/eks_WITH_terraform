@@ -24,6 +24,7 @@ podTemplate(
                 '''
             }
         }
+
         stage('Clone Repo') {
             container('dockerimage') {
                 sh 'git clone https://github.com/yousra000/eks_WITH_terraform'
@@ -59,6 +60,7 @@ podTemplate(
                         echo "REGISTRY=${env.REGISTRY}"
                         echo "REPOSITORY=${env.REPOSITORY}"
                     }
+
                     dir('eks_WITH_terraform/nodeapp') {
                         sh """
                             pwd
@@ -67,6 +69,7 @@ podTemplate(
                             docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
                         """
                     }
+                } // <-- this closing brace was missing
             }
         }
     }
