@@ -4,16 +4,10 @@ podTemplate(
         containerTemplate(
             name: 'dockerimage',
             image: 'maeltohamy/jenkins-agent',
-            command: 'sh',
-            args: '-c "dockerd --host tcp://0.0.0.0:2375 --host unix:///var/run/docker.sock & sleep 10"',
+            command: 'sleep',
+            args: '99999',
             ttyEnabled: true,
             privileged: true
-        )
-    ],
-    volumes: [
-        hostPathVolume(
-            mountPath: '/var/run/docker.sock',
-            hostPath: '/var/run/docker.sock'
         )
     ]
 ) {
@@ -63,7 +57,6 @@ podTemplate(
 
                     dir('nodeapp') {
                         sh """
-                            export DOCKER_HOST=tcp://localhost:2375
                             aws ecr get-login-password | docker login --username AWS --password-stdin ${env.REGISTRY}
                             docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
                             docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
