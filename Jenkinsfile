@@ -44,39 +44,36 @@ podTemplate(
                         aws sts get-caller-identity
                     '''
 
-                    dir('terraform') {
-                        sh 'terraform init'
-                        env.REGISTRY = sh(
-                            script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f1',
-                            returnStdout: true
-                        ).trim()
-                        env.REPOSITORY = sh(
-                            script: 'terraform output -raw aws_ecr_repository | cut -d "/" -f2',
-                            returnStdout: true
-                        ).trim()
-                        echo "REGISTRY=${env.REGISTRY}"
-                        echo "REPOSITORY=${env.REPOSITORY}"
-                    }
+                    // Fetch the ECR repository URL dynamically from AWS
+                    env.ECR_REGISTRY = sh(
+                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryUri" --output text',
+                        returnStdout: true
+                    ).trim()
+
+                    env.REPOSITORY = sh(
+                        script: 'aws ecr describe-repositories --query "repositories[0].repositoryName" --output text',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "ECR_REGISTRY=${env.ECR_REGISTRY}"
+                    echo "REPOSITORY=${env.REPOSITORY}"
+
+                    // AWS ECR login
+                    sh """
+                        aws ecr get-login --region ${env.AWS_DEFAULT_REGION} --no-include-email | \
+                        docker login --username AWS --password-stdin ${env.ECR_REGISTRY}
+                    """
 
                     dir('nodeapp') {
                         script {
-                            echo "REGISTRY=${env.REGISTRY}"
-                            echo "REPOSITORY=${env.REPOSITORY}"
-
-                            // AWS ECR login
-                            sh """
-                                aws ecr get-login --region ${env.AWS_DEFAULT_REGION} --no-include-email | \
-                                docker login --username AWS --password-stdin ${env.REGISTRY}
-                            """
-
                             // Docker build
                             sh """
-                                docker build -t ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
+                                docker build -t ${env.ECR_REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG} .
                             """
 
                             // Docker push
                             sh """
-                                docker push ${env.REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
+                                docker push ${env.ECR_REGISTRY}/${env.REPOSITORY}:${env.DOCKER_IMAGE_TAG}
                             """
                         }
                     }
@@ -85,5 +82,3 @@ podTemplate(
         }
     }
 }
-
-
